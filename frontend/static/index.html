@@ -19,9 +19,13 @@
   .msg.user .bubble { background:var(--accent); color:#fff; border:none; }
   /* When the reply is an A2UI card, drop the bubble chrome so the card stands alone. */
   .bubble.rich { background:transparent; border:none; padding:0; max-width:100%; white-space:normal; }
-  form { display:flex; gap:.5rem; padding:1rem; border-top:1px solid var(--border); background:#fff; }
+  .input-container { background:#fff; border-top:1px solid var(--border); }
+  .prompts-bar { display:flex; gap:.5rem; padding:.75rem 1rem 0; max-width:780px; width:100%; margin:0 auto; box-sizing:border-box; overflow-x:auto; }
+  .prompt-btn { flex:1; background:#f5f3ff; color:var(--accent); border:1px solid #ddd6fe; border-radius:20px; padding:.45rem .75rem; font-size:.85rem; font-weight:500; cursor:pointer; text-align:center; white-space:nowrap; transition:all .15s ease-in-out; }
+  .prompt-btn:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+  form { display:flex; gap:.5rem; padding:.6rem 1rem 1rem; max-width:780px; width:100%; margin:0 auto; box-sizing:border-box; }
   input { flex:1; padding:.7rem; border:1px solid var(--border); border-radius:8px; font-size:1rem; }
-  button { padding:.7rem 1.1rem; border:none; border-radius:8px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
+  form button { padding:.7rem 1.1rem; border:none; border-radius:8px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
 
   /* --- A2UI component styles (Card, Column, Row, Text, Divider, List, Image, Icon) --- */
   .a2card { border:1px solid var(--border); border-radius:12px; padding:1rem; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.06); max-width:100%; }
@@ -43,10 +47,17 @@
 <body>
 <header>RealmCrafter</header>
 <div id="log"></div>
-<form id="form">
-  <input id="input" placeholder="Ask RealmCrafter anything…" autocomplete="off" autofocus>
-  <button>Send</button>
-</form>
+<div class="input-container">
+  <div class="prompts-bar">
+    <button type="button" class="prompt-btn" onclick="sendPrompt(this.getAttribute('data-prompt'))" data-prompt="Show me items available in the magic shop">🛡️ Browse Magic Shop</button>
+    <button type="button" class="prompt-btn" onclick="sendPrompt(this.getAttribute('data-prompt'))" data-prompt="Roll 2d20 with advantage for an attack check">🎲 Roll 2d20 Advantage</button>
+    <button type="button" class="prompt-btn" onclick="sendPrompt(this.getAttribute('data-prompt'))" data-prompt="Inspect the stats and lore for a Young Red Dragon">🐉 Inspect Red Dragon</button>
+  </div>
+  <form id="form">
+    <input id="input" placeholder="Ask RealmCrafter anything…" autocomplete="off" autofocus>
+    <button>Send</button>
+  </form>
+</div>
 
 <script>
 const log = document.getElementById("log");
@@ -181,10 +192,8 @@ function renderReply(b, parts) {
   log.scrollTop = log.scrollHeight;
 }
 
-// The proxy returns { parts: [{kind:"text",text} | {kind:"a2ui",data}] }.
-form.addEventListener("submit", async (ev) => {
-  ev.preventDefault();
-  const text = input.value.trim();
+async function sendPrompt(text) {
+  text = (text || "").trim();
   if (!text) return;
   bubble("user").textContent = text;
   input.value = "";
@@ -202,6 +211,12 @@ form.addEventListener("submit", async (ev) => {
   } catch (e) {
     b.textContent = "Error: " + e.message;
   }
+}
+
+// The proxy returns { parts: [{kind:"text",text} | {kind:"a2ui",data}] }.
+form.addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  sendPrompt(input.value);
 });
 </script>
 </body>
