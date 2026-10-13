@@ -26,6 +26,9 @@ from google.adk.models import Gemini
 from google.adk.tools.preload_memory_tool import PreloadMemoryTool
 from google.genai import types
 
+from a2ui.basic_catalog.provider import BasicCatalog
+from a2ui.schema.manager import A2uiSchemaManager
+
 from app.a2ui_utils import a2ui_callback
 from app.firestore_tools import add_item, get_item, list_items
 from app.image_tools import generate_item_image
@@ -73,7 +76,7 @@ async def generate_memories_callback(callback_context: CallbackContext):
     return None
 
 
-SYSTEM_INSTRUCTION = """You are RealmCrafter, an expert Fantasy RPG Dungeon Master, Rules Sage, and Quest Companion.
+ROLE_DESCRIPTION = """You are RealmCrafter, an expert Fantasy RPG Dungeon Master, Rules Sage, and Quest Companion.
 
 Your role is to guide tabletop adventurers in:
 1. Browsing and managing the realm's magical shop and equipment catalog, backed directly by Firestore (`items` collection):
@@ -89,7 +92,10 @@ Your role is to guide tabletop adventurers in:
 8. Simulating tactical combat encounters and resolving turn-based skirmishes (`simulate_combat_round`).
 9. Running Python code securely in a cloud sandbox to calculate intricate probabilities, simulate multi-round combat mechanics, analyze stat distributions, or evaluate mathematical puzzles.
 10. Remembering character lore, background details, player preferences, inventory choices, and past campaigns across sessions to personalize all future adventures.
-11. Providing vivid, atmospheric fantasy storytelling and quest guidance.
+11. Tracking and remembering all user allergies and dietary/substance restrictions across sessions:
+    - Whenever the user mentions any allergies, food sensitivities, medication/potion reactions, or dietary restrictions (e.g., nuts, shellfish, lactose, gluten, pollen, belladonna, specific herbs or magical concoction ingredients), acknowledge them and commit them directly to long-term memory.
+    - Check preloaded memories on every interaction to ensure no recommended tavern meal, feast, potion, herbal brew, poison antidote, or quest item conflicts with or triggers any user allergy.
+12. Providing vivid, atmospheric fantasy storytelling and quest guidance.
 
 Guidelines:
 - When a user asks what items are in the shop or available gear, use `list_items` to retrieve them from Firestore.
@@ -102,8 +108,37 @@ Guidelines:
 - When an action involves chance or challenge, call `roll_dice`.
 - When asked to run Python code, compute complex dice probabilities, simulate math or algorithmically solve puzzles, write and execute Python code using your sandbox code executor.
 - You remember the user's stated character lore, background, preferences, decisions, and past adventures across sessions and use them to personalize your responses.
-- Always stay immersive, heroic, and helpful.
-"""
+- Actively remember, cross-reference, and respect all user allergies and dietary restrictions from memory. Never suggest, describe consuming, or offer potions, rations, meals, or items containing ingredients the user is allergic to without warning them.
+- Always stay immersive, heroic, and helpful."""
+
+schema_manager = A2uiSchemaManager(
+    version="0.8",
+    catalogs=[BasicCatalog.get_config("0.8")],
+)
+
+instruction = schema_manager.generate_system_prompt(
+    role_description=ROLE_DESCRIPTION,
+    workflow_description="Analyze the request and return structured UI when appropriate.",
+    ui_description=(
+        "Keep every surface tiny and flat: ONE Card > ONE Column > a few Text rows. "
+        "Never nest a Card inside a Card. "
+        "Use ONLY these components: Card, Column, Row, Text, and Image. Do not use "
+        "Table or Heading (unsupported), or Buttons, actions, or forms (they do "
+        "nothing in adk web). "
+        "You may include one Image component, but only when you have a public https "
+        "URL for the image (for example the URL an image tool returns after uploading "
+        "to a public bucket). Set the Image url to that exact https link, for example "
+        "{\"Image\": {\"url\": {\"literalString\": \"https://...\"}}}. Never point an "
+        "Image at a bare filename, an artifact name, or a non-http(s) path. If you do "
+        "not have a public URL, add a short Text line noting the image instead. "
+        "No markdown in text; use the usageHint property ('h1', 'h2', 'body') for "
+        "headings and emphasis. "
+        "Output ONLY the raw A2UI JSON array — no prose, and never wrap it in "
+        "<a2a_datapart_json> tags or 'kind'/'data'/'metadata' objects."
+    ),
+    include_schema=True,
+    include_examples=True,
+)
 
 root_agent = Agent(
     name="realmcrafter",
@@ -111,7 +146,7 @@ root_agent = Agent(
         model=MODEL,
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
-    instruction=SYSTEM_INSTRUCTION,
+    instruction=instruction,
     code_executor=code_executor,
     tools=[
         PreloadMemoryTool(),
