@@ -220,14 +220,21 @@ async def chat(req: Request):
             msg_kwargs["context_id"] = context_id
 
         msg = Message(**msg_kwargs)
-        if SendMessageRequest:
-            req_payload = SendMessageRequest(message=msg)
-        else:
-            req_payload = msg
 
         last_task = None
         got_artifact_update = False
-        async for event in a2a_client.send_message(req_payload):
+        try:
+            stream = a2a_client.send_message(msg)
+        except (TypeError, Exception):
+            if SendMessageRequest:
+                try:
+                    stream = a2a_client.send_message(SendMessageRequest(message=msg))
+                except Exception:
+                    stream = a2a_client.send_message(msg)
+            else:
+                stream = a2a_client.send_message(msg)
+
+        async for event in stream:
             if isinstance(event, tuple):
                 task, update = event
                 if task is not None:
