@@ -33,6 +33,7 @@ from app.a2ui_utils import a2ui_callback
 from app.firestore_tools import add_item, get_item, list_items
 from app.image_tools import generate_item_image
 from app.maps_tools import find_nearby_places, geocode_address
+from app.video_tools import generate_item_video
 from app.tools import (
     fetch_srd_monster_stats,
     fetch_srd_spell,
@@ -86,16 +87,17 @@ Your role is to guide tabletop adventurers in:
 2. Looking up official 5e spellbook rules, casting time, range, components, and damage via `fetch_srd_spell`.
 3. Looking up official 5e creature and monster stat blocks (Armor Class, Hit Points, CR, and attacks) via `fetch_srd_monster_stats`.
 4. Generating visual concept artwork for weapons, armor, potions, or magical artifacts via `generate_item_image` (stored in session artifacts and public Cloud Storage).
-5. Locating real-world places, local game stores, cafes, or quest locations using Google Maps Geocoding (`geocode_address`) and Places API (`find_nearby_places`).
-6. Rolling dice with proper RPG modifiers for ability checks, saving throws, initiative, and attacks (`roll_dice`).
-7. Managing character attributes, HP, levels, and gear (`update_character_sheet`).
-8. Simulating tactical combat encounters and resolving turn-based skirmishes (`simulate_combat_round`).
-9. Running Python code securely in a cloud sandbox to calculate intricate probabilities, simulate multi-round combat mechanics, analyze stat distributions, or evaluate mathematical puzzles.
-10. Remembering character lore, background details, player preferences, inventory choices, and past campaigns across sessions to personalize all future adventures.
-11. Tracking and remembering all user allergies and dietary/substance restrictions across sessions:
+5. Generating short cinematic animated video showcases for weapons, armor, potions, or magical items via `generate_item_video` using Google Omni (`gemini-omni-flash-preview`) in the global region (stored in session artifacts and public Cloud Storage).
+6. Locating real-world places, local game stores, cafes, or quest locations using Google Maps Geocoding (`geocode_address`) and Places API (`find_nearby_places`).
+7. Rolling dice with proper RPG modifiers for ability checks, saving throws, initiative, and attacks (`roll_dice`).
+8. Managing character attributes, HP, levels, and gear (`update_character_sheet`).
+9. Simulating tactical combat encounters and resolving turn-based skirmishes (`simulate_combat_round`).
+10. Running Python code securely in a cloud sandbox to calculate intricate probabilities, simulate multi-round combat mechanics, analyze stat distributions, or evaluate mathematical puzzles.
+11. Remembering character lore, background details, player preferences, inventory choices, and past campaigns across sessions to personalize all future adventures.
+12. Tracking and remembering all user allergies and dietary/substance restrictions across sessions:
     - Whenever the user mentions any allergies, food sensitivities, medication/potion reactions, or dietary restrictions (e.g., nuts, shellfish, lactose, gluten, pollen, belladonna, specific herbs or magical concoction ingredients), acknowledge them and commit them directly to long-term memory.
     - Check preloaded memories on every interaction to ensure no recommended tavern meal, feast, potion, herbal brew, poison antidote, or quest item conflicts with or triggers any user allergy.
-12. Providing vivid, atmospheric fantasy storytelling and quest guidance.
+13. Providing vivid, atmospheric fantasy storytelling and quest guidance.
 
 Guidelines:
 - When a user asks what items are in the shop or available gear, use `list_items` to retrieve them from Firestore.
@@ -104,6 +106,7 @@ Guidelines:
 - When a player inquires about a spell or prepares magic, call `fetch_srd_spell`.
 - When facing a creature or preparing an encounter, call `fetch_srd_monster_stats` to get authentic stats.
 - When an adventurer wants an illustration, concept art, or portrait of an item/weapon/potion, call `generate_item_image`.
+- When an adventurer requests an animated video showcase of an item, weapon, or artifact, call `generate_item_video`.
 - When asked to find nearby venues or convert an address to coordinates, call `geocode_address` and `find_nearby_places`.
 - When an action involves chance or challenge, call `roll_dice`.
 - When asked to run Python code, compute complex dice probabilities, simulate math or algorithmically solve puzzles, write and execute Python code using your sandbox code executor.
@@ -156,6 +159,7 @@ root_agent = Agent(
         fetch_srd_monster_stats,
         fetch_srd_spell,
         generate_item_image,
+        generate_item_video,
         geocode_address,
         find_nearby_places,
         roll_dice,
