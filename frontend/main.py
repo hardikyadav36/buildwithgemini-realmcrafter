@@ -140,6 +140,14 @@ async def _get_card(client: httpx.AsyncClient) -> AgentCard:
     return _card
 
 
+def _is_a2ui_payload(data, mime=None) -> bool:
+    if mime == _A2UI_MIME:
+        return True
+    if isinstance(data, dict):
+        return any(k in data for k in ("beginRendering", "surfaceUpdate", "dataModelUpdate", "deleteSurface"))
+    return False
+
+
 def _extract_parts(parts: list) -> list[dict]:
     """Turn A2A response parts into structured parts for the chat UI.
 
@@ -156,9 +164,12 @@ def _extract_parts(parts: list) -> list[dict]:
                 out.append({"kind": "text", "text": d["text"]})
             elif d.get("data") is not None:
                 data = d["data"]
+                mime = None
                 if isinstance(data, dict) and data.get("kind") == "data" and "data" in data:
+                    mime = (data.get("metadata") or {}).get("mimeType")
                     data = data["data"]
-                out.append({"kind": "a2ui", "data": data})
+                if _is_a2ui_payload(data, mime):
+                    out.append({"kind": "a2ui", "data": data})
             elif d.get("url"):
                 out.append({"kind": "text", "text": d["url"]})
             continue
@@ -170,11 +181,14 @@ def _extract_parts(parts: list) -> list[dict]:
             out.append({"kind": "text", "text": root.text})
         elif getattr(root, "data", None) is not None:
             data = root.data
-            if isinstance(data, dict) and data.get("kind") == "data" and "data" in data:
-                data = data["data"]
             meta = getattr(root, "metadata", None) or {}
             mime = meta.get("mimeType") if isinstance(meta, dict) else None
-            if mime == _A2UI_MIME or isinstance(data, dict):
+            if isinstance(data, dict) and data.get("kind") == "data" and "data" in data:
+                inner_meta = data.get("metadata") or {}
+                if isinstance(inner_meta, dict):
+                    mime = inner_meta.get("mimeType", mime)
+                data = data["data"]
+            if _is_a2ui_payload(data, mime):
                 out.append({"kind": "a2ui", "data": data})
         elif FilePart and isinstance(root, FilePart):
             uri = getattr(getattr(root, "file", None), "uri", None)
